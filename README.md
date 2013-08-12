@@ -1,0 +1,4 @@
+RallyExercises
+==============
+
+Coding exercises
