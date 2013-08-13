@@ -34,7 +34,7 @@ namespace RallyExercises.Exercise3
         _maxDigits++;
       }
     }
-    
+
     /// <summary>
     /// Gets the previously generated spiral data if it exists.
     /// If it doesn't exist, then it will be calculated and stored for future use.
@@ -52,76 +52,124 @@ namespace RallyExercises.Exercise3
     }
 
     /// <summary>
+    /// Initialize the grid required to hold the spiral values.
+    /// </summary>
+    /// <returns>Returns an initialize matrix</returns>
+    private int[,] InitializeGrid()
+    {
+      int width;
+      int height;
+            
+      CalculateGridDimensions(out width, out height);
+
+      // This used to be calculated via the following:
+      //   var squareRootInput = Math.Sqrt(_maxValue + 1);
+      //   var width = (int)Math.Ceiling(squareRootInput);
+      //   var height = (int)Math.Ceiling(Math.Floor(squareRootInput + 0.5));
+
+      var grid = new int[width, height];
+
+      // Initialize grid to invalid values (-1)
+      // After filling the grid, any remaining invalid values 
+      // will display as blank cells
+      for (var x = 0; x < width; x++)
+      {
+        for (var y = 0; y < height; y++)
+        {
+          grid[x, y] = -1;
+        }
+      }
+
+      return grid;
+    }
+
+    /// <summary>
+    /// Calculates the dimensions required for the spiral data matrix
+    /// by simulating a run through the spiral.
+    /// </summary>
+    /// <param name="width">Output: width of matrix</param>
+    /// <param name="height">Output: height of matrix</param>
+    private void CalculateGridDimensions(out int width, out int height)
+    {
+      int minX = 0;
+      int minY = 0;
+      int maxX = 0;
+      int maxY = 0;
+
+      var location = new Vector2D(0, 0);
+      var segment = new SpiralSegment(1, UnitVectors.Right);
+
+      int index = 0;
+
+      do
+      {
+        int remainingCells = _maxValue - index;
+        Vector2D distanceToTravel;
+
+        if (remainingCells >= segment.Length)
+        {
+          // travel the full segment and then get the next segment
+          index += segment.Length;
+          distanceToTravel = segment.Direction.Multiply(segment.Length);
+
+          segment = segment.Next();
+        }
+        else
+        {
+          // travel the remaining cells
+          index += remainingCells;
+          distanceToTravel = segment.Direction.Multiply(remainingCells);
+        }
+
+        location = location.Add(distanceToTravel);
+
+        // Update the observed bounds
+        minX = (int)Math.Min(minX, location.X);
+        minY = (int)Math.Min(minY, location.Y);
+        maxX = (int)Math.Max(maxX, location.X);
+        maxY = (int)Math.Max(maxY, location.Y);
+      } while (index < _maxValue);
+
+      width = maxX - minX + 1;
+      height = maxY - minY + 1;
+    }
+
+    /// <summary>
     /// Generates a matrix representing a clockwise spiral of numbers 
     /// with zero at the center
     /// </summary>
     /// <returns>Returns a matrix representing a spiral of numbers</returns>
     private int[,] GenerateSpiral()
     {
-      // Determine size of matrix required to store the spiral
-      var squareRootInput = Math.Sqrt(_maxValue + 1);
-      var width = (int)Math.Ceiling(squareRootInput);
-      var height = (int)Math.Ceiling(Math.Floor(squareRootInput + 0.5));
+      // initialize the grid
+      var output = InitializeGrid();
 
-      var output = new int[width, height];
+      int width = output.GetLength(0);
+      int height = output.GetLength(1);
 
-      for (var i = 0; i < width; i++)
-      {
-        for (var j = 0; j < height; j++)
-        {
-          output[i, j] = -1;
-        }
-      }
-      
       // Start at the center of the grid
-      int x = (int)((width - 1) / 2);
-      int y = (int)((height - 1) / 2);
+      var location = new Vector2D(
+        x: (int)((width - 1) / 2),
+        y: (int)((height - 1) / 2));
 
-      // Start by moving right
-      int dX = 1;
-      int dY = 0;
-
-      // The first segment is 1 item long:
-      //  E.g.: go right 1 cell, then change direction
+      // Set the initial segment (move 1 cell to the right)
+      var segment = new SpiralSegment(1, UnitVectors.Right);
       int segmentIndex = 0;
-      int segmentLength = 1;
-      
+
       for (var i = 0; i <= _maxValue; i++)
       {
-        output[x, y] = i;
+        output[location.X, location.Y] = i;
 
         // Move to the next cell
-        x += dX;
-        y += dY;
-
         segmentIndex++;
+        location = location.Add(segment.Direction);
 
         // If this is the end of a segment, then change directions
         // and start a new segment
-        if (segmentIndex >= segmentLength)
+        if (segmentIndex >= segment.Length)
         {
           segmentIndex = 0;
-          
-          // Update dX and dY to change directions according to the cycle:
-          // ... Right -> Down -> Left -> Up -> Right ...
-          //
-          // dX  dY   Direction
-          //-------------------
-          //  1   0   Right
-          //  0   1   Down
-          // -1   0   Left
-          //  0  -1   Up
-
-          var oldDX = dX;
-          dX = -dY;
-          dY = oldDX;
-
-          // When changing from vertical to horizontal movement,
-          // Increase the length of the segment by 1
-          if (dX != 0)
-          {
-            segmentLength++;
-          }
+          segment = segment.Next();
         }
       }
 
